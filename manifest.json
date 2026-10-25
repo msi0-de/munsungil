@@ -1,0 +1,16 @@
+{
+  "name": "피아로 연습장",
+  "short_name": "피아로",
+  "description": "악보를 보고 치면 맞은 음과 틀린 음을 표시하고 틀린 마디를 3번 반복하는 피아노 연습 앱",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#E9EDF2",
+  "theme_color": "#2F55D4",
+  "lang": "ko",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
