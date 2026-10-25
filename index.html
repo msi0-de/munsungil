@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>피아로 연습장</title><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body style="margin:0">
+<title>피아로 연습장</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Noto+Music&display=swap">
+<style>
+/* Layout: one practice desk, a status strip on top, the score sheet in the middle, the keyboard at the bottom */
+:root{
+  --ground:#E9EDF2; --sheet:#FFFFFF; --ink:#18202D; --muted:#5D6878; --line:#C9D0DA;
+  --accent:#2F55D4; --accent-soft:#DCE4FB; --ok:#178A4C; --ok-soft:#D8F1E3; --bad:#D23B32; --bad-soft:#FBE0DE;
+  --key-white:#FBFCFD; --key-black:#1C222C; --key-edge:#B8C0CC;
+  --font-ui:"IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-music:"Noto Music", "Bravura", "Segoe UI Symbol", serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ground:#10141B; --sheet:#1A2029; --ink:#E6EAF0; --muted:#98A3B3; --line:#3A4452;
+  --accent:#7D9BFF; --accent-soft:#25325A; --ok:#4CC783; --ok-soft:#17382A; --bad:#FF6F66; --bad-soft:#47201F;
+  --key-white:#E9EDF2; --key-black:#0A0D12; --key-edge:#5A6575; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --ground:#10141B; --sheet:#1A2029; --ink:#E6EAF0; --muted:#98A3B3; --line:#3A4452;
+  --accent:#7D9BFF; --accent-soft:#25325A; --ok:#4CC783; --ok-soft:#17382A; --bad:#FF6F66; --bad-soft:#47201F;
+  --key-white:#E9EDF2; --key-black:#0A0D12; --key-edge:#5A6575; color-scheme:dark;}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--ground);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+.wrap{max-width:1040px;margin:0 auto;padding-block:20px 28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px}
+h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);font-size:13px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select,button{font:inherit;color:var(--ink)}
+select{background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-width:0}
+button{background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;font-weight:500;white-space:nowrap}
+button:hover{border-color:var(--accent)}
+button:focus-visible,select:focus-visible,.key:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--sheet)}
+button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+button:disabled{opacity:.5;cursor:default}
+.spacer{flex:1}
+label.chk{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--muted);cursor:pointer;user-select:none}
+
+.status{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;background:var(--sheet);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.status .msg{font-size:18px;font-weight:600;min-width:0}
+.status .msg small{display:block;font-size:13px;font-weight:400;color:var(--muted)}
+.status.ok{border-color:var(--ok)} .status.bad{border-color:var(--bad)}
+.reps{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted)}
+.reps i{width:14px;height:14px;border-radius:50%;border:2px solid var(--ok);display:inline-block}
+.reps i.done{background:var(--ok)}
+.hear{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;flex-wrap:wrap}
+.meter{width:90px;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.meter b{display:block;height:100%;width:0;background:var(--accent)}
+.hear .note{font-weight:600;color:var(--ink);min-width:58px}
+
+.sheet{background:var(--sheet);border:1px solid var(--line);border-radius:12px;padding:10px 6px 4px}
+.sheet svg{display:block;width:100%;height:auto}
+.viewport{overflow:hidden;position:relative}
+.viewport.follow svg{width:auto;max-width:none;transition:transform .45s ease}
+.prog{height:3px;margin:2px 10px 8px;background:var(--line);border-radius:2px;overflow:hidden}
+.prog b{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+button.big{padding:7px 18px;font-weight:700}
+button.big.on{background:var(--bad);border-color:var(--bad);color:var(--sheet)}
+.staff line{stroke:var(--ink);stroke-width:1}
+.staff .bar{stroke-width:1.2}
+.staff .bar.end{stroke-width:3.5}
+.clef{font-family:var(--font-music);fill:var(--ink)}
+.tsig{font-family:var(--font-music);fill:var(--ink);font-weight:700}
+.n .head{fill:var(--ink);stroke:var(--ink);stroke-width:1.2}
+.n .head.hollow{fill:var(--sheet)}
+.n .stem,.n .ledger{stroke:var(--ink);stroke-width:1.3}
+.n .flag{fill:var(--ink)}
+.n .dot{fill:var(--ink)}
+.n text{fill:var(--muted);font-size:12px;text-anchor:middle;font-family:var(--font-ui)}
+.n .halo{fill:transparent}
+.n.cur .halo{fill:var(--accent-soft)}
+.n.cur .head,.n.cur .stem,.n.cur .flag,.n.cur .dot{fill:var(--accent);stroke:var(--accent)}
+.n.cur .head.hollow{fill:var(--sheet)}
+.n.cur text{fill:var(--accent);font-weight:700}
+.n.ok .head,.n.ok .stem,.n.ok .flag,.n.ok .dot{fill:var(--ok);stroke:var(--ok)}
+.n.ok .head.hollow{fill:var(--ok-soft)}
+.n.ok text{fill:var(--ok)}
+.n.miss .head,.n.miss .stem,.n.miss .flag,.n.miss .dot{fill:var(--bad);stroke:var(--bad)}
+.n.miss .head.hollow{fill:var(--bad-soft)}
+.n.miss text{fill:var(--bad);font-weight:700}
+.n.playing .halo{fill:var(--accent-soft)}
+.secband{fill:var(--bad-soft)}
+.secband.active{fill:var(--accent-soft)}
+.mhit{fill:transparent;cursor:pointer}
+.mhit:hover{fill:var(--accent);fill-opacity:.06}
+.mnum{fill:var(--muted);font-size:10px;font-family:var(--font-ui)}
+.ghost{fill:var(--bad);opacity:.85;transition:opacity .8s}
+.ghost-t{fill:var(--bad);font-size:12px;font-weight:700;font-family:var(--font-ui)}
+.hint-line{font-size:12px;color:var(--muted);padding:0 10px 6px}
+
+.result{background:var(--sheet);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+.result .score{font-size:34px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.result .score small{font-size:14px;color:var(--muted);font-weight:500}
+.result .detail{flex:1;min-width:200px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{background:var(--bad-soft);color:var(--bad);border-radius:999px;padding:2px 10px;font-size:13px;font-weight:600}
+
+.piano{position:relative;height:150px;user-select:none;touch-action:none;background:var(--sheet);border:1px solid var(--line);border-radius:12px;padding:8px;overflow:hidden}
+.keys{position:relative;height:100%}
+.key{position:absolute;top:0;border:1px solid var(--key-edge);cursor:pointer;display:flex;align-items:flex-end;justify-content:center;font-size:11px;padding-bottom:6px;transition:background .08s}
+.key.w{background:var(--key-white);height:100%;border-radius:0 0 6px 6px;color:#5D6878;z-index:1}
+.key.b{background:var(--key-black);height:60%;border-radius:0 0 4px 4px;z-index:2;border-color:var(--key-black)}
+.key.hint.w{background:#DCE4FB;box-shadow:inset 0 -5px 0 #2F55D4}
+.key.hint.b{background:#2F55D4}
+.key.hit-ok.w{background:#BFE8D0} .key.hit-ok.b{background:#178A4C}
+.key.hit-bad.w{background:#F7C9C5} .key.hit-bad.b{background:#D23B32}
+.key .kb{position:absolute;top:6px;font-size:10px;opacity:.55}
+.key.b .kb{color:#C9D0DA}
+.foot{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+.notice{background:var(--bad-soft);color:var(--ink);border-radius:10px;padding:10px 14px;font-size:13px}
+@media (max-width:560px){
+  .status{grid-template-columns:1fr}
+  .piano{height:130px}
+  .key .kb{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1><span>피아로</span> 연습장</h1>
+    <div class="sub">악보를 보고 치면 맞은 음은 초록, 틀린 음은 빨강으로 표시돼요</div>
+  </header>
+
+  <div class="toolbar">
+    <select id="song" aria-label="곡 선택"></select>
+    <button id="btnListen" type="button">▶ 들어보기</button>
+    <button id="btnRestart" type="button">처음부터</button>
+    <span class="spacer"></span>
+    <button id="btnStart" type="button" class="primary big">▶ 시작</button>
+    <button id="btnMidi" type="button">MIDI 건반 연결</button>
+  </div>
+  <div class="toolbar">
+    <label class="chk"><input type="checkbox" id="optFollow" checked> 한 줄로 따라가기</label>
+    <label class="chk"><input type="checkbox" id="optNames" checked> 계이름 보기</label>
+    <label class="chk"><input type="checkbox" id="optHint" checked> 건반 힌트</label>
+    <label class="chk"><input type="checkbox" id="optOct" checked> 마이크: 옥타브 차이 무시</label>
+    <label class="chk">마이크 감도 <input type="range" id="optSens" min="1" max="10" value="6" style="width:90px"></label>
+  </div>
+
+  <div id="notice" class="notice" hidden></div>
+
+  <div id="status" class="status" aria-live="polite">
+    <div class="msg" id="msg">첫 음을 쳐 보세요<small>▶ 시작을 누르면 피아노 소리를 듣고 악보를 따라가며 채점해요</small></div>
+    <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+      <div class="reps" id="reps" hidden></div>
+      <div class="hear" id="hear"><span>들리는 음</span><span class="note" id="heardNote">–</span><span class="meter"><b id="meter"></b></span></div>
+    </div>
+  </div>
+
+  <div class="sheet">
+    <div class="viewport" id="vp"><svg id="score" role="img" aria-label="악보"></svg></div>
+    <div class="prog" id="prog"><b></b></div>
+    <div class="hint-line">마디를 누르면 그 마디만 3번 반복 연습할 수 있어요</div>
+  </div>
+
+  <div id="result" class="result" hidden></div>
+
+  <div class="piano"><div class="keys" id="keys"></div></div>
+
+  <div class="foot">
+    <span>컴퓨터 키보드로도 칠 수 있어요: A S D F G H J K = 도 레 미 파 솔 라 시 도 (W E T Y U = 검은 건반)</span>
+    <span>박자는 채점하지 않고 음 높이만 확인해요. 틀리면 그 음에서 기다리니까 천천히 맞는 음을 찾아 치면 돼요.</span>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+// ---------- songs ----------
+// token: Note+octave[/beats]; default 1 beat. "|" is only for readability.
+const SONGS = [
+  {id:'airplane', title:'비행기', beats:4, src:'E4 D4 C4 D4 | E4 E4 E4/2 | D4 D4 D4/2 | E4 G4 G4/2 | E4 D4 C4 D4 | E4 E4 E4 E4 | D4 D4 E4 D4 | C4/4'},
+  {id:'bell', title:'학교 종', beats:4, src:'G4 G4 A4 A4 | G4 G4 E4/2 | G4 G4 E4 E4 | D4/4 | G4 G4 A4 A4 | G4 G4 E4/2 | G4 E4 D4 E4 | C4/4'},
+  {id:'star', title:'반짝반짝 작은 별', beats:4, src:'C4 C4 G4 G4 | A4 A4 G4/2 | F4 F4 E4 E4 | D4 D4 C4/2 | G4 G4 F4 F4 | E4 E4 D4/2 | G4 G4 F4 F4 | E4 E4 D4/2 | C4 C4 G4 G4 | A4 A4 G4/2 | F4 F4 E4 E4 | D4 D4 C4/2'},
+  {id:'butterfly', title:'나비야', beats:4, src:'G4 E4 E4/2 | F4 D4 D4/2 | C4 D4 E4 F4 | G4 G4 G4/2 | G4 E4 E4 E4 | F4 D4 D4 D4 | C4 E4 G4 G4 | E4 E4 E4/2 | D4 D4 D4 D4 | D4 E4 F4/2 | E4 E4 E4 E4 | E4 F4 G4/2 | G4 E4 E4 E4 | F4 D4 D4 D4 | C4 E4 G4 G4 | C4/4'},
+  {id:'joy', title:'환희의 송가', beats:4, src:'E4 E4 F4 G4 | G4 F4 E4 D4 | C4 C4 D4 E4 | E4/1.5 D4/.5 D4/2 | E4 E4 F4 G4 | G4 F4 E4 D4 | C4 C4 D4 E4 | D4/1.5 C4/.5 C4/2'},
+  {id:'river', title:'River Flows in You (쉬운 버전)', beats:4, key:[8,5,9],
+   src:'A5/.5 G#5/.5 A5/.5 G#5/.5 A5/.5 E5/.5 A5 | D5/3 A4/.5 C#5/.5 | A5/.5 G#5/.5 A5/.5 G#5/.5 A5/.5 E5/.5 A5 | D5/3 A4/.5 C#5/.5 | A5/1.5 G#5/.5 A5/2 | A5/.5 G#5/.5 A5 E5/.5 A5/1.5 | A5/.5 D5/.5 A5 C#5/.5 D5/.5 E5/.5 C#5/.5 | B4/3 A4/.5 G#4/.5 | A4/3 A4/.5 B4/.5 | C#5/3 C#5/.5 D5/.5 | E5/3 D5/.5 C#5/.5 | B4/3 A4/.5 G#4/.5 | A4/4'},
+];
+const PC = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+const LETTERS = 'CDEFGAB';
+const SOLFA = ['도','도#','레','레#','미','파','파#','솔','솔#','라','라#','시'];
+const nameOf = m => SOLFA[((m%12)+12)%12];
+const eul = m => { const n=nameOf(m); return n==='솔'||n.endsWith('#') ? '을' : '를'; };
+const sciName = m => ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'][m%12] + (Math.floor(m/12)-1);
+
+function parseSong(s){
+  const notes=[]; let beat=0;
+  for(const tok of s.src.split(/\s+/)){
+    if(!tok || tok==='|') continue;
+    const [p,d] = tok.split('/');
+    const mm = p.match(/^([A-G])(#?)(\d)$/);
+    const oct=+mm[3], midi=(oct+1)*12+PC[mm[1]]+(mm[2]?1:0);
+    const dur = d ? parseFloat(d) : 1;
+    notes.push({midi, dur, beat, measure:Math.floor(beat/s.beats+1e-9), step:oct*7+LETTERS.indexOf(mm[1])-(4*7+2), sharp:!!mm[2]});
+    beat+=dur;
+  }
+  return {...s, notes, measures:Math.ceil(beat/s.beats-1e-9)};
+}
+
+// ---------- state ----------
+const $ = id => document.getElementById(id);
+let song, marks, errAt;
+let st = {mode:'play', cursor:0, start:0, end:0, passErr:false, sections:[], sec:0, reps:0, locked:false, done:false, wrongTotal:0};
+let geo = []; // per-note {x,y,row}
+let measureBoxes = [];
+let scoreW = 0;
+function followTo(i){
+  const svg=$('score'), vp=$('vp');
+  const total=song.notes.length;
+  $('prog').firstElementChild.style.width = Math.round(Math.min(i,total)/total*100)+'%';
+  if(!$('optFollow').checked) return;
+  const p=geo[Math.min(i,total-1)]; if(!p) return;
+  const vw=vp.clientWidth;
+  const tx=Math.max(0, Math.min(scoreW-vw, p.x - vw*0.3));
+  svg.style.transform=`translateX(${-tx}px)`;
+}
+
+function loadSong(id){
+  song = parseSong(SONGS.find(s=>s.id===id) || SONGS[0]);
+  try{ localStorage.setItem('piaro.song', song.id); }catch(e){}
+  restart();
+}
+function restart(){
+  stopListen();
+  marks = song.notes.map(()=> 'pending');
+  errAt = song.notes.map(()=> false);
+  st = {mode:'play', cursor:0, start:0, end:song.notes.length, passErr:false, sections:[], sec:0, reps:0, locked:false, done:false, wrongTotal:0};
+  $('result').hidden = true;
+  render(); update();
+  say(`첫 음 <b>${nameOf(song.notes[0].midi)}</b>${eul(song.notes[0].midi)} 쳐 보세요`, '화면 건반을 누르거나, 마이크나 MIDI 건반을 켜고 진짜 피아노로 쳐도 돼요');
+}
+
+// ---------- score rendering ----------
+const SVGNS='http://www.w3.org/2000/svg';
+function el(tag, attrs, parent, text){
+  const e=document.createElementNS(SVGNS, tag);
+  for(const k in attrs) e.setAttribute(k, attrs[k]);
+  if(text!=null) e.textContent=text;
+  if(parent) parent.appendChild(e);
+  return e;
+}
+function render(){
+  const svg=$('score');
+  const follow=$('optFollow').checked;
+  const VW = Math.max(300, $('vp').clientWidth);
+  const perM=[]; song.notes.forEach(n=>perM[n.measure]=(perM[n.measure]||0)+1);
+  const maxN=Math.max(...perM.filter(Boolean));
+  const G=10, rowH=118, top=34, clefW=52, tsW=22, right=10;
+  let W=VW, perRow = W>900?4 : W>600?3 : 2;
+  if(follow){
+    perRow=song.measures;
+    const mw=Math.max(VW>600?230:170, maxN*40);
+    W=4+clefW+(song.key?song.key.length*9+4:0)+tsW+mw*perRow+right+VW*0.6;
+  } else {
+    while(perRow>1 && (W-100)/perRow/maxN < 30) perRow--;
+  }
+  const rows = Math.ceil(song.measures/perRow);
+  $('vp').classList.toggle('follow',follow);
+  svg.style.width = follow ? W+'px' : '';
+  svg.style.transform='';
+  scoreW=W;
+  const showNames=$('optNames').checked;
+  svg.setAttribute('viewBox', `0 0 ${W} ${rows*rowH+8}`);
+  svg.innerHTML='';
+  const bands=el('g',{},svg), staff=el('g',{class:'staff'},svg), notesG=el('g',{},svg), hits=el('g',{},svg);
+  geo=[]; measureBoxes=[];
+  for(let r=0;r<rows;r++){
+    const y0=r*rowH+top, yb=y0+4*G;
+    const lineEnd = follow ? W-right-VW*0.6 : W-right;
+    for(let i=0;i<5;i++) el('line',{x1:4,x2:lineEnd,y1:y0+i*G,y2:y0+i*G},staff);
+    el('text',{class:'clef',x:6,y:yb-G+1,'font-size':42},staff,'𝄞');
+    let x0=4+clefW;
+    if(song.key){
+      song.key.forEach((ks,j)=>el('text',{class:'clef',x:x0-4+j*9,y:yb-ks*G/2+4,'font-size':26},staff,'♯'));
+      x0+=song.key.length*9+4;
+    }
+    if(r===0){
+      el('text',{class:'tsig',x:x0,y:y0+2*G-1,'font-size':20},staff,String(song.beats));
+      el('text',{class:'tsig',x:x0,y:yb-1,'font-size':20},staff,'4');
+      x0+=tsW;
+    }
+    const mw=(W-right-x0-(follow?VW*0.6:0))/perRow;
+    for(let k=0;k<perRow;k++){
+      const m=r*perRow+k; if(m>=song.measures) break;
+      const mx=x0+k*mw;
+      measureBoxes[m]={x:mx,w:mw,y:y0-24,h:4*G+60,row:r};
+      el('text',{class:'mnum',x:mx+3,y:y0-6},staff,String(m+1));
+      const last=m===song.measures-1;
+      el('line',{class:'bar'+(last?' end':''),x1:mx+mw-(last?2:0),x2:mx+mw-(last?2:0),y1:y0,y2:yb},staff);
+      if(last) el('line',{class:'bar',x1:mx+mw-7,x2:mx+mw-7,y1:y0,y2:yb},staff);
+      const hr=el('rect',{class:'mhit',x:mx,y:y0-24,width:mw,height:4*G+60,'data-m':m,rx:6},hits);
+      hr.addEventListener('click',()=>practiceMeasures([[m,m]], true));
+    }
+  }
+  song.notes.forEach((n,i)=>{
+    const b=measureBoxes[n.measure];
+    const pad=Math.min(18,b.w*.12);
+    const rel=(n.beat-n.measure*song.beats)/song.beats;
+    const x=b.x+pad+8+rel*(b.w-pad*2-8);
+    const y0=b.row*rowH+top, yb=y0+4*G;
+    const y=yb-n.step*G/2;
+    geo[i]={x,y};
+    const g=el('g',{class:'n','data-i':i},notesG);
+    el('rect',{class:'halo',x:x-11,y:y0-16,width:22,height:4*G+52,rx:6},g);
+    for(let s=-2;s>=n.step;s-=2) el('line',{class:'ledger',x1:x-10,x2:x+10,y1:yb-s*G/2,y2:yb-s*G/2},g);
+    for(let s=10;s<=n.step;s+=2) el('line',{class:'ledger',x1:x-10,x2:x+10,y1:yb-s*G/2,y2:yb-s*G/2},g);
+    const hollow=n.dur>=2;
+    el('ellipse',{class:'head'+(hollow?' hollow':''),cx:x,cy:y,rx:6.2,ry:4.4,transform:`rotate(-20 ${x} ${y})`},g);
+    if(n.dur<4){
+      const up=n.step<4;
+      const sx=up?x+5.6:x-5.6, sy2=up?y-32:y+32;
+      el('line',{class:'stem',x1:sx,x2:sx,y1:y,y2:sy2},g);
+      if(n.dur<1){
+        const d=up?1:-1;
+        el('path',{class:'flag',d:`M${sx} ${sy2} c 2 ${8*d} 10 ${10*d} 8 ${22*d} c 0 ${-8*d} -4 ${-12*d} -8 ${-14*d} z`},g);
+      }
+    }
+    if(n.dur===3||n.dur===1.5) el('circle',{class:'dot',cx:x+11,cy:y-(n.step%2===0?G/2:0)+0.0,r:1.9},g);
+    if(showNames) el('text',{x,y:yb+28},g,nameOf(n.midi));
+  });
+  // section bands
+  st.sections.forEach((sec,si)=>{
+    for(let m=sec[0];m<=sec[1];m++){
+      const b=measureBoxes[m]; if(!b) continue;
+      el('rect',{class:'secband'+(st.mode==='repeat'&&si===st.sec?' active':''),x:b.x+1,y:b.y,width:b.w-2,height:b.h,rx:6},bands);
+    }
+  });
+  paintNotes();
+  if(song && st) followTo(st.done ? song.notes.length : st.cursor);
+}
+function paintNotes(){
+  document.querySelectorAll('#score .n').forEach(g=>{
+    const i=+g.dataset.i;
+    let c='n';
+    if(i===st.cursor && !st.done && i>=st.start && i<st.end) c+=' cur';
+    else if(marks[i]==='ok') c+=' ok';
+    else if(marks[i]==='miss') c+=' miss';
+    g.setAttribute('class',c);
+  });
+}
+function ghost(midi){
+  const exp=song.notes[st.cursor], p=geo[st.cursor]; if(!p) return;
+  // place the wrong pitch next to the expected note, in the same octave region
+  let m=midi; if($('optOct').checked && lastSrc==='mic'){ while(m-exp.midi>6) m-=12; while(exp.midi-m>6) m+=12; }
+  const letterStep = (mm)=>{ const oct=Math.floor(mm/12)-1, pc=mm%12; const map=[0,0,1,1,2,3,3,4,4,5,5,6]; return oct*7+map[pc]-(4*7+2); };
+  const yb=p.y+exp.step*5;
+  const y=yb-letterStep(m)*5;
+  const svg=$('score');
+  const g=el('g',{},svg);
+  const e=el('ellipse',{class:'ghost',cx:p.x+16,cy:y,rx:5.5,ry:4,transform:`rotate(-20 ${p.x+16} ${y})`},g);
+  el('text',{class:'ghost-t',x:p.x+24,y:y+4},g,nameOf(midi)+'?');
+  requestAnimationFrame(()=>{ e.style.opacity='0'; });
+  setTimeout(()=>g.remove(),900);
+}
+
+// ---------- practice engine ----------
+let lastSrc='key';
+function matches(midi, exp){
+  if(lastSrc==='mic' && $('optOct').checked) return midi%12===exp%12;
+  return midi===exp;
+}
+function onNote(midi, src){
+  lastSrc=src;
+  if(src!=='mic') flashKey(midi, null);
+  if(st.done || st.locked || listening) return;
+  const exp=song.notes[st.cursor];
+  if(matches(midi, exp.midi)){
+    marks[st.cursor]= errAt[st.cursor] ? 'miss' : 'ok';
+    flashKey(exp.midi,'hit-ok');
+    st.cursor++;
+    if(st.cursor>=st.end) finishPass();
+    else {
+      const nx=song.notes[st.cursor];
+      sayKeep(`좋아요! 다음은 <b>${nameOf(nx.midi)}</b>`, progressText(), 'ok');
+    }
+  } else {
+    if(!errAt[st.cursor]) st.wrongTotal++;
+    errAt[st.cursor]=true; st.passErr=true;
+    flashKey(midi,'hit-bad');
+    ghost(midi);
+    sayKeep(`<b>${nameOf(midi)}</b>${eul(midi)} 쳤어요. <b>${nameOf(exp.midi)}</b>${eul(exp.midi)} 쳐 보세요`, '틀린 음은 빨간색으로 남아요. 맞는 음을 치면 다음으로 넘어가요', 'bad');
+  }
+  update();
+}
+function progressText(){
+  if(st.mode==='repeat'){
+    const sec=st.sections[st.sec];
+    return `${secLabel(sec)} 반복 연습 · 실수 없이 ${st.reps}/3번`;
+  }
+  return `${st.cursor}/${song.notes.length} 음`;
+}
+function secLabel(sec){ return sec[0]===sec[1] ? `${sec[0]+1}마디` : `${sec[0]+1}~${sec[1]+1}마디`; }
+
+function finishPass(){
+  if(st.mode==='play'){
+    st.done=true;
+    const wrongMeasures=[...new Set(song.notes.map((n,i)=>marks[i]==='miss'?n.measure:-1).filter(m=>m>=0))].sort((a,b)=>a-b);
+    const sections=[];
+    for(const m of wrongMeasures){
+      const last=sections[sections.length-1];
+      if(last && m===last[1]+1) last[1]=m; else sections.push([m,m]);
+    }
+    st.sections=sections;
+    showResult(wrongMeasures);
+    render();
+    if(sections.length) say('끝까지 쳤어요! 틀린 곳을 3번씩 연습해 볼까요?', `틀린 마디: ${sections.map(secLabel).join(', ')}`, 'bad');
+    else say('완벽해요! 한 음도 안 틀렸어요 🎉', '다른 곡을 골라 보거나, 처음부터 다시 쳐 보세요', 'ok');
+  } else {
+    if(!st.passErr){ st.reps++; }
+    const sec=st.sections[st.sec];
+    if(st.reps>=3){
+      st.sec++;
+      if(st.sec>=st.sections.length){
+        st.done=true; st.mode='play'; st.sections=[];
+        render();
+        say('반복 연습 끝! 이제 처음부터 다시 쳐 보세요 💪', '“처음부터”를 누르면 전체 곡을 다시 채점해요', 'ok');
+        $('result').hidden=true;
+        update(); return;
+      }
+      startPass(true);
+      say(`${secLabel(sec)} 통과! 다음은 ${secLabel(st.sections[st.sec])}`, `첫 음 ${nameOf(song.notes[st.start].midi)}부터 실수 없이 3번`, 'ok');
+    } else {
+      const counted=!st.passErr;
+      startPass(false);
+      say(counted ? `좋아요! ${st.reps}/3번 성공. 한 번 더!` : '실수가 있어서 이번 판은 세지 않았어요. 다시!',
+          `${secLabel(sec)} 첫 음 <b>${nameOf(song.notes[st.start].midi)}</b>부터`, counted?'ok':'bad');
+    }
+  }
+  update();
+}
+function practiceMeasures(sections, manual){
+  stopListen();
+  st.mode='repeat'; st.sections=sections; st.sec=0; st.done=false;
+  $('result').hidden=true;
+  startPass(true);
+  render();
+  const sec=sections[0];
+  say(`${secLabel(sec)}를 실수 없이 3번 쳐 보세요`, `첫 음 <b>${nameOf(song.notes[st.start].midi)}</b>부터 시작해요`);
+  update();
+}
+function startPass(newSection){
+  const sec=st.sections[st.sec];
+  const idx=song.notes.map((n,i)=>(n.measure>=sec[0]&&n.measure<=sec[1])?i:-1).filter(i=>i>=0);
+  st.start=idx[0]; st.end=idx[idx.length-1]+1; st.cursor=st.start; st.passErr=false;
+  if(newSection){ st.reps=0; render(); }
+  for(let i=st.start;i<st.end;i++){ marks[i]='pending'; errAt[i]=false; }
+  st.locked=true; setTimeout(()=>{st.locked=false;},500);
+}
+function showResult(wrongMeasures){
+  const total=song.notes.length;
+  const wrong=marks.filter(m=>m==='miss').length;
+  const pct=Math.round((total-wrong)/total*100);
+  const r=$('result');
+  r.innerHTML='';
+  const sc=document.createElement('div'); sc.className='score'; sc.innerHTML=`${pct}<small>점</small>`;
+  const d=document.createElement('div'); d.className='detail';
+  d.innerHTML=`<b>${total}음 중 ${total-wrong}음을 한 번에 맞혔어요.</b>`;
+  if(st.sections.length){
+    const chips=document.createElement('div'); chips.className='chips';
+    st.sections.forEach(s=>{ const c=document.createElement('span'); c.className='chip'; c.textContent=secLabel(s); chips.appendChild(c); });
+    d.appendChild(chips);
+  }
+  r.append(sc,d);
+  if(st.sections.length){
+    const b=document.createElement('button'); b.className='primary'; b.type='button'; b.textContent='틀린 곳 3번씩 연습하기';
+    b.onclick=()=>practiceMeasures(st.sections.map(s=>[...s]));
+    r.appendChild(b);
+  }
+  const again=document.createElement('button'); again.type='button'; again.textContent='처음부터 다시';
+  again.onclick=restart; r.appendChild(again);
+  r.hidden=false;
+}
+
+// ---------- status ui ----------
+function say(main, small, tone){ sayKeep(main, small, tone); }
+function sayKeep(main, small, tone){
+  $('msg').innerHTML = main + (small?`<small>${small}</small>`:'');
+  const s=$('status'); s.classList.remove('ok','bad'); if(tone) s.classList.add(tone);
+}
+function update(){
+  paintNotes();
+  followTo(st.done ? song.notes.length : st.cursor);
+  const reps=$('reps');
+  if(st.mode==='repeat' && !st.done){
+    reps.hidden=false;
+    reps.innerHTML=`<span>${secLabel(st.sections[st.sec])}</span>`+[0,1,2].map(i=>`<i class="${i<st.reps?'done':''}"></i>`).join('')+`<button type="button" id="btnSkip" style="padding:2px 8px;font-size:12px">건너뛰기</button>`;
+    $('btnSkip').onclick=()=>{ st.reps=3; st.passErr=true; finishPass(); };
+  } else reps.hidden=true;
+  document.querySelectorAll('.key.hint').forEach(k=>k.classList.remove('hint'));
+  if($('optHint').checked && !st.done){
+    const n=song.notes[st.cursor]; const k=n && keyEls[n.midi]; if(k) k.classList.add('hint');
+  }
+}
+
+// ---------- keyboard ----------
+const keyEls={};
+const LOW=60, HIGH=83; // C4..B5
+const KBMAP={a:60,w:61,s:62,e:63,d:64,f:65,t:66,g:67,y:68,h:69,u:70,j:71,k:72,o:73,l:74,p:75,';':76,"'":77};
+const KBLABEL=Object.fromEntries(Object.entries(KBMAP).map(([k,v])=>[v,k.toUpperCase()]));
+function buildKeys(){
+  const box=$('keys'); box.innerHTML='';
+  const whites=[]; for(let m=LOW;m<=HIGH;m++) if(![1,3,6,8,10].includes(m%12)) whites.push(m);
+  const ww=100/whites.length;
+  whites.forEach((m,i)=>{
+    const k=document.createElement('div'); k.className='key w'; k.style.left=(i*ww)+'%'; k.style.width=ww+'%';
+    k.innerHTML=(KBLABEL[m]?`<span class="kb">${KBLABEL[m]}</span>`:'')+`<span>${nameOf(m)}</span>`;
+    k.dataset.m=m; box.appendChild(k); keyEls[m]=k;
+    if([0,2,5,7,9].includes(m%12) && m+1<=HIGH){
+      const b=document.createElement('div'); b.className='key b';
+      b.style.left=((i+1)*ww-ww*0.3)+'%'; b.style.width=(ww*0.6)+'%'; b.dataset.m=m+1;
+      if(KBLABEL[m+1]) b.innerHTML=`<span class="kb">${KBLABEL[m+1]}</span>`;
+      box.appendChild(b); keyEls[m+1]=b;
+    }
+  });
+  box.addEventListener('pointerdown',e=>{
+    const k=e.target.closest('.key'); if(!k) return;
+    e.preventDefault();
+    const m=+k.dataset.m; playTone(m,0.6); onNote(m,'key');
+  });
+}
+const flashTimers={};
+function flashKey(m, cls){
+  const k=keyEls[m]; if(!k||!cls) return;
+  k.classList.remove('hit-ok','hit-bad'); void k.offsetWidth; k.classList.add(cls);
+  clearTimeout(flashTimers[m]); flashTimers[m]=setTimeout(()=>k.classList.remove(cls),350);
+}
+window.addEventListener('keydown',e=>{
+  if(e.repeat||e.metaKey||e.ctrlKey||e.altKey) return;
+  if(e.target.tagName==='SELECT'||e.target.tagName==='INPUT') return;
+  const m=KBMAP[e.key.toLowerCase()]; if(m==null) return;
+  e.preventDefault(); playTone(m,0.6); onNote(m,'key');
+});
+
+// ---------- sound ----------
+let actx=null;
+function ac(){ if(!actx){ const C=window.AudioContext||window.webkitAudioContext; actx=new C(); } if(actx.state==='suspended') actx.resume(); return actx; }
+function playTone(m, dur, when){
+  const c=ac(); const t=when||c.currentTime; const f=440*Math.pow(2,(m-69)/12);
+  const g=c.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.32,t+0.01); g.gain.exponentialRampToValueAtTime(0.0008,t+Math.max(.4,dur)+0.6);
+  const lp=c.createBiquadFilter(); lp.type='lowpass'; lp.frequency.setValueAtTime(Math.min(8000,f*8),t); lp.frequency.exponentialRampToValueAtTime(Math.max(400,f*2),t+0.8);
+  [[1,'triangle',1],[2,'sine',.35],[3,'sine',.12]].forEach(([mul,type,amp])=>{
+    const o=c.createOscillator(); o.type=type; o.frequency.value=f*mul;
+    const og=c.createGain(); og.gain.value=amp; o.connect(og).connect(lp);
+    o.start(t); o.stop(t+Math.max(.4,dur)+0.7);
+  });
+  lp.connect(g).connect(c.destination);
+}
+let listening=false, listenTimers=[];
+function listen(){
+  if(listening){ stopListen(); return; }
+  const c=ac(); listening=true; $('btnListen').textContent='■ 멈추기'; $('btnListen').classList.add('on');
+  const spb=60/84; let t0=c.currentTime+0.15;
+  const from = (st.mode==='repeat'&&!st.done) ? st.start : 0;
+  const to = (st.mode==='repeat'&&!st.done) ? st.end : song.notes.length;
+  const base=song.notes[from].beat;
+  for(let i=from;i<to;i++){
+    const n=song.notes[i], at=t0+(n.beat-base)*spb;
+    playTone(n.midi, n.dur*spb, at);
+    listenTimers.push(setTimeout(()=>{
+      document.querySelectorAll('#score .n.playing').forEach(g=>g.classList.remove('playing'));
+      const g=document.querySelector(`#score .n[data-i="${i}"]`); if(g) g.classList.add('playing'); followTo(i);
+    },(at-c.currentTime)*1000));
+  }
+  const endAt=(song.notes[to-1].beat+song.notes[to-1].dur-base)*spb+0.6;
+  listenTimers.push(setTimeout(stopListen,endAt*1000+300));
+}
+function stopListen(){
+  listenTimers.forEach(clearTimeout); listenTimers=[];
+  document.querySelectorAll('#score .n.playing').forEach(g=>g.classList.remove('playing'));
+  if(listening && song) setTimeout(()=>followTo(st.cursor),50);
+  if(listening){ listening=false; $('btnListen').textContent='▶ 들어보기'; $('btnListen').classList.remove('on'); micQuietUntil=performance.now()+1200; }
+}
+
+// ---------- microphone pitch detection (YIN) ----------
+let micStream=null, analyser=null, micBuf=null, micRaf=0, micQuietUntil=0;
+function notice(html){ const n=$('notice'); n.innerHTML=html; n.hidden=!html; }
+async function toggleMic(){
+  if(micStream){ stopMic(); return; }
+  try{
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia) throw new Error('nomedia');
+    micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+  }catch(e){
+    micStream=null;
+    notice('마이크를 쓸 수 없어요. 이 화면이 마이크를 막고 있거나 권한이 거부됐어요. <b>piaro.html 파일을 크롬이나 엣지에서 직접 열면</b> 마이크와 MIDI 건반을 쓸 수 있어요. 지금은 화면 건반이나 컴퓨터 키보드로 연습할 수 있어요.');
+    return;
+  }
+  notice('');
+  const c=ac();
+  const src=c.createMediaStreamSource(micStream);
+  analyser=c.createAnalyser(); analyser.fftSize=2048; src.connect(analyser);
+  micBuf=new Float32Array(analyser.fftSize);
+  micLoop();
+}
+function stopMic(){
+  cancelAnimationFrame(micRaf);
+  if(micStream) micStream.getTracks().forEach(t=>t.stop());
+  micStream=null; analyser=null;
+  $('meter').style.width='0'; $('heardNote').textContent='–';
+}
+function yin(buf, sr){
+  const N=buf.length, W=N>>1;
+  const tMin=Math.floor(sr/1200), tMax=Math.min(W-1,Math.floor(sr/70));
+  const d=new Float32Array(tMax+1);
+  for(let t=1;t<=tMax;t++){ let s=0; for(let i=0;i<W;i++){ const x=buf[i]-buf[i+t]; s+=x*x; } d[t]=s; }
+  let run=0; const cm=new Float32Array(tMax+1); cm[0]=1;
+  for(let t=1;t<=tMax;t++){ run+=d[t]; cm[t]=run? d[t]*t/run : 1; }
+  let tau=-1;
+  for(let t=tMin;t<=tMax;t++){
+    if(cm[t]<0.15){ while(t+1<=tMax && cm[t+1]<cm[t]) t++; tau=t; break; }
+  }
+  if(tau<0) return -1;
+  const a=cm[tau-1]||cm[tau], b=cm[tau], c2=cm[tau+1]||cm[tau];
+  const den=a+c2-2*b; const shift=den? (a-c2)/(2*den):0;
+  return sr/(tau+shift);
+}
+let rmsHist=[], cand=-1, candN=0, onsetPending=false, lastOnset=0, lastEmit=null;
+function micLoop(){
+  micRaf=requestAnimationFrame(micLoop);
+  if(!analyser) return;
+  analyser.getFloatTimeDomainData(micBuf);
+  let rms=0; for(let i=0;i<micBuf.length;i++) rms+=micBuf[i]*micBuf[i]; rms=Math.sqrt(rms/micBuf.length);
+  const sens=+$('optSens').value; const th=0.004+ (10-sens)*0.004;
+  $('meter').style.width=Math.min(100,rms/0.15*100)+'%';
+  const now=performance.now();
+  const minRecent=rmsHist.length? Math.min(...rmsHist) : 0;
+  if(rms>th && rms>minRecent*1.6+0.002 && now-lastOnset>110){ onsetPending=true; lastOnset=now; }
+  rmsHist.push(rms); if(rmsHist.length>5) rmsHist.shift();
+  if(rms<th*0.6){ lastEmit=null; cand=-1; candN=0; $('heardNote').textContent='–'; return; }
+  if(rms<th) return;
+  const f=yin(micBuf, actx.sampleRate);
+  if(f<=0) return;
+  const midi=Math.round(69+12*Math.log2(f/440));
+  if(midi<36||midi>96) return;
+  if(midi===cand) candN++; else { cand=midi; candN=1; }
+  if(candN===2 || candN===4) $('heardNote').textContent=`${nameOf(midi)} ${sciName(midi)}`;
+  if(candN>=3){
+    if(now<micQuietUntil || listening){ onsetPending=false; lastEmit=cand; return; }
+    if(onsetPending || cand!==lastEmit){
+      onsetPending=false; lastEmit=cand; onNote(cand,'mic');
+    }
+  }
+}
+
+// ---------- MIDI ----------
+async function connectMidi(){
+  if(!navigator.requestMIDIAccess){ notice('이 브라우저는 MIDI 건반을 지원하지 않아요. 크롬이나 엣지에서 piaro.html 파일을 직접 열어 보세요.'); return; }
+  try{
+    const acc=await navigator.requestMIDIAccess();
+    const hook=()=>{ let n=0; acc.inputs.forEach(inp=>{ inp.onmidimessage=msg=>{ const [s,d1,d2]=msg.data; if((s&0xf0)===0x90 && d2>0) onNote(d1,'midi'); }; n++; });
+      $('btnMidi').textContent= n? `MIDI 연결됨 (${n})` : 'MIDI 건반 없음'; $('btnMidi').classList.toggle('on',n>0);
+      if(!n) notice('MIDI 건반을 찾지 못했어요. USB로 연결한 뒤 다시 눌러 보세요.'); else notice(''); };
+    acc.onstatechange=hook; hook();
+  }catch(e){
+    notice('MIDI 연결이 막혀 있어요. <b>piaro.html 파일을 크롬이나 엣지에서 직접 열면</b> MIDI 건반을 쓸 수 있어요.');
+  }
+}
+
+// ---------- wiring ----------
+const sel=$('song');
+SONGS.forEach(s=>{ const o=document.createElement('option'); o.value=s.id; o.textContent=s.title; sel.appendChild(o); });
+let saved=null; try{ saved=localStorage.getItem('piaro.song'); }catch(e){}
+if(saved && SONGS.some(s=>s.id===saved)) sel.value=saved;
+sel.onchange=()=>loadSong(sel.value);
+$('btnRestart').onclick=restart;
+$('btnListen').onclick=listen;
+let running=false;
+async function startRun(){
+  if(running){ stopRun(); return; }
+  restart();
+  running=true;
+  const b=$('btnStart'); b.textContent='■ 멈추기'; b.classList.add('on');
+  document.querySelector('.sheet').scrollIntoView({block:'nearest',behavior:'smooth'});
+  if(!micStream) await toggleMic();
+  if(micStream) say(`듣고 있어요. 첫 음 <b>${nameOf(song.notes[0].midi)}</b>부터 쳐 보세요`, '치는 음에 맞춰 악보가 옆으로 넘어가요');
+  else say(`첫 음 <b>${nameOf(song.notes[0].midi)}</b>부터 쳐 보세요`, '마이크 없이 화면 건반, 키보드, MIDI 건반으로 칠 수 있어요');
+}
+function stopRun(){
+  running=false; stopMic();
+  const b=$('btnStart'); b.textContent='▶ 시작'; b.classList.remove('on');
+  say('멈췄어요', '▶ 시작을 누르면 처음부터 다시 들어요');
+}
+$('btnStart').onclick=startRun;
+$('optFollow').onchange=()=>{ render(); update(); };
+$('btnMidi').onclick=connectMidi;
+$('optNames').onchange=render;
+$('optHint').onchange=update;
+let rT; window.addEventListener('resize',()=>{ clearTimeout(rT); rT=setTimeout(render,120); });
+buildKeys();
+loadSong(sel.value);
+if(document.fonts) document.fonts.ready.then(render);
+})();
+</script>
+
+</body></html>
